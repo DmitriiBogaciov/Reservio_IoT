@@ -39,19 +39,27 @@ static const twr_radio_sub_t subs[] = {
 // Button event callback
 void button_event_handler(twr_button_t *self, twr_button_event_t event, void *event_param)
 {
+    const char *subtopic = "node/demo:0/button/-/state";
     // Log button event
     twr_log_info("APP: Button event: %i", event);
-    twr_led_set_mode(&led, TWR_LED_MODE_OFF);
+    
+        int call = 1;
+        int expend = 2;
 
     // Check event source
     if (event == TWR_BUTTON_EVENT_CLICK)
-    {
+    {   
         // Toggle LED pin state
         twr_led_set_mode(&led, TWR_LED_MODE_TOGGLE);
 
          // Publish message on radio
         button_click_count++;
         twr_radio_pub_push_button(&button_click_count);
+        twr_radio_pub_int(subtopic, &call);
+    } else if(event == TWR_BUTTON_EVENT_HOLD) {
+        
+        twr_led_set_mode(&led, TWR_LED_MODE_OFF);
+        twr_radio_pub_int(subtopic, &expend);
     }
 }
 
