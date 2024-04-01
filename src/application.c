@@ -20,15 +20,23 @@ void twr_set_led(uint64_t *id, const char *topic, void *value, void *param){
 
 	switch (led_value){
 		case 0: 
-			twr_led_set_mode(&led, TWR_LED_MODE_BLINK_FAST);
+            set_led_color(255, 0, 0);
+			// twr_led_set_mode(&led, TWR_LED_MODE_BLINK_FAST);
 			break;
 		case 1: 
-			twr_led_set_mode(&led, TWR_LED_MODE_OFF);
+            set_led_color(0, 0, 255);
+            // twr_led_set_mode(&led, TWR_LED_MODE_BLINK_SLOW);
 			break;
+        case 2:
+            set_led_color(0, 255, 0);
+			// twr_led_set_mode(&led, TWR_LED_MODE_OFF);
+            break;
+        case 3:
+            set_led_color(0, 0, 0);
+            break;
 		default: 
 			break;
 	}
-	
 	twr_log_info("State: %d", led_value);
 }
 
@@ -50,17 +58,23 @@ void button_event_handler(twr_button_t *self, twr_button_event_t event, void *ev
     if (event == TWR_BUTTON_EVENT_CLICK)
     {   
         // Toggle LED pin state
-        twr_led_set_mode(&led, TWR_LED_MODE_TOGGLE);
+        // twr_led_set_mode(&led, TWR_LED_MODE_TOGGLE);
 
          // Publish message on radio
-        button_click_count++;
-        twr_radio_pub_push_button(&button_click_count);
+        // button_click_count++;
+        // twr_radio_pub_push_button(&button_click_count);
         twr_radio_pub_int(subtopic, &call);
     } else if(event == TWR_BUTTON_EVENT_HOLD) {
-        
-        twr_led_set_mode(&led, TWR_LED_MODE_OFF);
+        // set_led_color(0, 0, 0);
+        // twr_led_set_mode(&led, TWR_LED_MODE_OFF);
         twr_radio_pub_int(subtopic, &expend);
     }
+}
+
+void set_led_color(uint8_t red, uint8_t green, uint8_t blue){
+    twr_pwm_set(TWR_PWM_P6, blue);
+    twr_pwm_set(TWR_PWM_P7, green);
+    twr_pwm_set(TWR_PWM_P8, red);
 }
 
 void tmp112_event_handler(twr_tmp112_t *self, twr_tmp112_event_t event, void *event_param)
@@ -99,6 +113,16 @@ void application_init(void)
     twr_radio_init(TWR_RADIO_MODE_NODE_LISTENING);
 	twr_radio_set_subs((twr_radio_sub_t*)subs, sizeof(subs) / sizeof(twr_radio_sub_t));
 	twr_radio_pairing_request("demo", FW_VERSION);
+
+    // blue
+    twr_pwm_init(TWR_PWM_P6);
+    twr_pwm_enable(TWR_PWM_P6);
+    // red
+    twr_pwm_init(TWR_PWM_P7);
+    twr_pwm_enable(TWR_PWM_P7);
+    // green
+    twr_pwm_init(TWR_PWM_P8);
+    twr_pwm_enable(TWR_PWM_P8);
 }
 
 // Application task function (optional) which is called peridically if scheduled

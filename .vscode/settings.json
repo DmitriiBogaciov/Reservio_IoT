@@ -27,5 +27,6 @@
         "${workspaceFolder}/sdk/stm",
         "${default}"
     ],
-    "terminal.integrated.shell.windows": "C:\\Windows\\sysnative\\cmd.exe"
+    "terminal.integrated.shell.windows": "C:\\Windows\\sysnative\\cmd.exe",
+    "C_Cpp.errorSquiggles": "disabled"
 }
