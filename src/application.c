@@ -34,6 +34,9 @@ void twr_set_led(uint64_t *id, const char *topic, void *value, void *param){
         case 3:
             set_led_color(0, 0, 0);
             break;
+        case 4:
+            set_led_color(255, 255, 255);
+            break;
 		default: 
 			break;
 	}
