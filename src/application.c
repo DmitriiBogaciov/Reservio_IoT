@@ -52,7 +52,7 @@ void button_event_handler(twr_button_t *self, twr_button_event_t event, void *ev
     twr_log_info("APP: Button event: %i", event);
     
         int call = 1;
-        int expend = 2;
+        int extend = 2;
 
     // Check event source
     if (event == TWR_BUTTON_EVENT_CLICK)
@@ -67,7 +67,7 @@ void button_event_handler(twr_button_t *self, twr_button_event_t event, void *ev
     } else if(event == TWR_BUTTON_EVENT_HOLD) {
         // set_led_color(0, 0, 0);
         // twr_led_set_mode(&led, TWR_LED_MODE_OFF);
-        twr_radio_pub_int(subtopic, &expend);
+        twr_radio_pub_int(subtopic, &extend);
     }
 }
 
