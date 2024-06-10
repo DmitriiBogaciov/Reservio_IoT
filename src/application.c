@@ -1,7 +1,3 @@
-// Tower Kit documentation https://tower.hardwario.com/
-// SDK API description https://sdk.hardwario.com/
-// Forum https://forum.hardwario.com/
-
 #include <application.h>
 
 // LED instance
@@ -14,38 +10,61 @@ twr_button_t button;
 twr_tmp112_t tmp112;
 uint16_t button_click_count = 0;
 
-void twr_set_led(uint64_t *id, const char *topic, void *value, void *param){
+// Variables for LED blinking
+bool led_blinking = false;
+int blink_count = 0;
+int max_blink_count = 10; 
+int blink_type = 0;
+twr_tick_t last_blink_time = 0;
+const twr_tick_t blink_interval = 500; // 500 ms interval for blinking
 
-	int led_value = *((int *)value);
+void twr_set_led(uint64_t *id, const char *topic, void *value, void *param)
+{
+    int led_value = *((int *)value);
+    twr_log_debug("Received value: %d", led_value);
 
-	switch (led_value){
-		case 0: 
-            set_led_color(255, 0, 0);
-			// twr_led_set_mode(&led, TWR_LED_MODE_BLINK_FAST);
-			break;
-		case 1: 
-            set_led_color(0, 0, 255);
-            // twr_led_set_mode(&led, TWR_LED_MODE_BLINK_SLOW);
-			break;
-        case 2:
-            set_led_color(0, 255, 0);
-			// twr_led_set_mode(&led, TWR_LED_MODE_OFF);
-            break;
-        case 3:
-            set_led_color(0, 0, 0);
-            break;
-        case 4:
-            set_led_color(255, 255, 255);
-            break;
-		default: 
-			break;
-	}
-	twr_log_info("State: %d", led_value);
+    switch (led_value)
+    {
+    case 0:
+        set_led_color(255, 0, 0);
+        led_blinking = false;
+        break;
+    case 1:
+        set_led_color(0, 0, 255);
+        led_blinking = false;
+        break;
+    case 2:
+        set_led_color(0, 255, 0);
+        led_blinking = false;
+        break;
+    case 3:
+        set_led_color(0, 0, 0);
+        led_blinking = false;
+        break;
+    case 4:
+        blink_count = 0;
+        max_blink_count = 10; // Number of blinks
+        blink_type = 1;
+        led_blinking = true;
+        last_blink_time = twr_tick_get();
+        twr_scheduler_plan_now(0); // Start blinking
+        break;
+    case 5:
+        blink_count = 0;
+        max_blink_count = 10; // Number of blinks
+        blink_type = 2;
+        led_blinking = true;
+        last_blink_time = twr_tick_get();
+        twr_scheduler_plan_now(0); // Start blinking
+        break;
+    default:
+        break;
+    }
+    twr_log_info("State: %d", led_value);
 }
 
 static const twr_radio_sub_t subs[] = {
-    {"led/-/state/set", TWR_RADIO_SUB_PT_INT, twr_set_led, NULL}
-};
+    {"led/-/state/set", TWR_RADIO_SUB_PT_INT, twr_set_led, NULL}};
 
 // Button event callback
 void button_event_handler(twr_button_t *self, twr_button_event_t event, void *event_param)
@@ -53,37 +72,73 @@ void button_event_handler(twr_button_t *self, twr_button_event_t event, void *ev
     const char *subtopic = "node/demo:0/button/-/state";
     // Log button event
     twr_log_info("APP: Button event: %i", event);
-    
-        int call = 1;
-        int extend = 2;
+
+    int call = 1;
+    int extend = 2;
 
     // Check event source
     if (event == TWR_BUTTON_EVENT_CLICK)
-    {   
-        // Toggle LED pin state
-        // twr_led_set_mode(&led, TWR_LED_MODE_TOGGLE);
-
-         // Publish message on radio
-        // button_click_count++;
-        // twr_radio_pub_push_button(&button_click_count);
+    {
+        // Publish message on radio
         twr_radio_pub_int(subtopic, &call);
-    } else if(event == TWR_BUTTON_EVENT_HOLD) {
-        // set_led_color(0, 0, 0);
-        // twr_led_set_mode(&led, TWR_LED_MODE_OFF);
+    }
+    else if (event == TWR_BUTTON_EVENT_HOLD)
+    {
         twr_radio_pub_int(subtopic, &extend);
     }
 }
 
-void set_led_color(uint8_t red, uint8_t green, uint8_t blue){
+void set_led_color(uint8_t red, uint8_t green, uint8_t blue)
+{
     twr_pwm_set(TWR_PWM_P6, blue);
     twr_pwm_set(TWR_PWM_P7, green);
     twr_pwm_set(TWR_PWM_P8, red);
 }
 
+void led_blink_task(void *param)
+{
+    static bool led_on = false;
+    twr_tick_t current_time = twr_tick_get();
+
+    if (led_blinking && (current_time - last_blink_time) >= blink_interval)
+    {
+
+        if (led_on)
+        {
+            // Turn off the LED
+            set_led_color(0, 0, 0);
+        }
+        else
+        {
+            if (blink_type == 1)
+            {
+                set_led_color(0, 0, 255); // Blue
+            }
+            else if (blink_type == 2)
+            {
+                set_led_color(255, 0, 0); // Red
+            }
+        }
+
+        led_on = !led_on;
+        blink_count++;
+        last_blink_time = current_time;
+
+        if (blink_count >= max_blink_count * 2) 
+        {
+            led_blinking = false;
+            set_led_color(0, 0, 255); 
+        }
+    }
+
+        twr_scheduler_plan_current_from_now(blink_interval); // Plan next execution
+
+}
+
 void tmp112_event_handler(twr_tmp112_t *self, twr_tmp112_event_t event, void *event_param)
 {
     if (event == TWR_TMP112_EVENT_UPDATE)
-    {   
+    {
         float celsius;
         // Read temperature
         twr_tmp112_get_temperature_celsius(self, &celsius);
@@ -114,9 +169,10 @@ void application_init(void)
     twr_tmp112_set_update_interval(&tmp112, 10000);
 
     twr_radio_init(TWR_RADIO_MODE_NODE_LISTENING);
-	twr_radio_set_subs((twr_radio_sub_t*)subs, sizeof(subs) / sizeof(twr_radio_sub_t));
-	twr_radio_pairing_request("demo", FW_VERSION);
+    twr_radio_set_subs((twr_radio_sub_t *)subs, sizeof(subs) / sizeof(twr_radio_sub_t));
+    twr_radio_pairing_request("demo", FW_VERSION);
 
+    // Initialize PWM for LED control
     // blue
     twr_pwm_init(TWR_PWM_P6);
     twr_pwm_enable(TWR_PWM_P6);
@@ -126,16 +182,7 @@ void application_init(void)
     // green
     twr_pwm_init(TWR_PWM_P8);
     twr_pwm_enable(TWR_PWM_P8);
+
+    twr_scheduler_register(led_blink_task, NULL, blink_interval);
 }
 
-// Application task function (optional) which is called peridically if scheduled
-// void application_task(void)
-// {
-//     static int counter = 0;
-
-//     // Log task run and increment counter
-//     twr_log_debug("APP: Task run (count: %d)", ++counter);
-
-//     // Plan next run of this task in 1000 ms
-//     twr_scheduler_plan_current_from_now(1000);
-// }
