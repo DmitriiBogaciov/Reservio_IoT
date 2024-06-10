@@ -13,8 +13,14 @@ uint16_t button_click_count = 0;
 // Variables for LED blinking
 bool led_blinking = false;
 int blink_count = 0;
-int max_blink_count = 10; 
+int max_blink_count = 10;
 int blink_type = 0;
+uint8_t red = 0;
+uint8_t green = 0;
+uint8_t blue = 0;
+uint8_t initial_red = 0;
+uint8_t initial_green = 0;
+uint8_t initial_blue = 0;
 twr_tick_t last_blink_time = 0;
 const twr_tick_t blink_interval = 500; // 500 ms interval for blinking
 
@@ -26,19 +32,31 @@ void twr_set_led(uint64_t *id, const char *topic, void *value, void *param)
     switch (led_value)
     {
     case 0:
-        set_led_color(255, 0, 0);
+        red = 255;
+        green = 0;
+        blue = 0;
+        set_led_color(red, green, blue);
         led_blinking = false;
         break;
     case 1:
-        set_led_color(0, 0, 255);
+        red = 0;
+        green = 0;
+        blue = 255;
+        set_led_color(red, green, blue);
         led_blinking = false;
         break;
     case 2:
-        set_led_color(0, 255, 0);
+        red = 0;
+        green = 255;
+        blue = 0;
+        set_led_color(red, green, blue);
         led_blinking = false;
         break;
     case 3:
-        set_led_color(0, 0, 0);
+        red = 0;
+        green = 0;
+        blue = 0;
+        set_led_color(red, green, blue);
         led_blinking = false;
         break;
     case 4:
@@ -46,6 +64,12 @@ void twr_set_led(uint64_t *id, const char *topic, void *value, void *param)
         max_blink_count = 10; // Number of blinks
         blink_type = 1;
         led_blinking = true;
+        initial_red = red;
+        initial_green = green;
+        initial_blue = blue;
+        red = 0;
+        green = 0;
+        blue = 255;
         last_blink_time = twr_tick_get();
         twr_scheduler_plan_now(0); // Start blinking
         break;
@@ -54,6 +78,26 @@ void twr_set_led(uint64_t *id, const char *topic, void *value, void *param)
         max_blink_count = 10; // Number of blinks
         blink_type = 2;
         led_blinking = true;
+        initial_red = red;
+        initial_green = green;
+        initial_blue = blue;
+        red = 255;
+        green = 0;
+        blue = 0;
+        last_blink_time = twr_tick_get();
+        twr_scheduler_plan_now(0); // Start blinking
+        break;
+    case 6:
+        blink_count = 0;
+        max_blink_count = 10; // Number of blinks
+        blink_type = 2;
+        led_blinking = true;
+        initial_red = red;
+        initial_green = green;
+        initial_blue = blue;
+        red = 0;
+        green = 255;
+        blue = 0;
         last_blink_time = twr_tick_get();
         twr_scheduler_plan_now(0); // Start blinking
         break;
@@ -81,6 +125,9 @@ void button_event_handler(twr_button_t *self, twr_button_event_t event, void *ev
     {
         // Publish message on radio
         twr_radio_pub_int(subtopic, &call);
+
+        int value = 5;
+        twr_set_led(NULL, NULL, &value, NULL);
     }
     else if (event == TWR_BUTTON_EVENT_HOLD)
     {
@@ -110,29 +157,21 @@ void led_blink_task(void *param)
         }
         else
         {
-            if (blink_type == 1)
-            {
-                set_led_color(0, 0, 255); // Blue
-            }
-            else if (blink_type == 2)
-            {
-                set_led_color(255, 0, 0); // Red
-            }
+            set_led_color(red, green, blue);
         }
 
         led_on = !led_on;
         blink_count++;
         last_blink_time = current_time;
 
-        if (blink_count >= max_blink_count * 2) 
+        if (blink_count >= max_blink_count * 2)
         {
             led_blinking = false;
-            set_led_color(0, 0, 255); 
+            set_led_color(initial_red, initial_green, initial_blue);
         }
     }
 
-        twr_scheduler_plan_current_from_now(blink_interval); // Plan next execution
-
+    twr_scheduler_plan_current_from_now(blink_interval); // Plan next execution
 }
 
 void tmp112_event_handler(twr_tmp112_t *self, twr_tmp112_event_t event, void *event_param)
@@ -185,4 +224,3 @@ void application_init(void)
 
     twr_scheduler_register(led_blink_task, NULL, blink_interval);
 }
-
